@@ -28,4 +28,8 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-src/data
+# Ignorar todo en src/data
+src/data/*
+
+# Pero no ignorar el archivo .gitkeep
+!src/data/.gitkeep

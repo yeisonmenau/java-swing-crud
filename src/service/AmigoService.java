@@ -101,6 +101,7 @@ public class AmigoService implements AmigoDAO {
     public String update(Long idBuscar, Amigo amigo, File bd) {
         Long nuevoId = amigo.getId();
         String nuevoNombre = amigo.getNombre();
+
         if (nuevoId == null && (nuevoNombre == null || nuevoNombre.trim().isEmpty())) {
             throw new RuntimeException("Debe ingresar al menos un nuevo valor para actualizar.");
         }
@@ -110,6 +111,23 @@ public class AmigoService implements AmigoDAO {
             String linea;
             boolean encontrado = false;
 
+            // 1. Validar que el nuevo ID no exista (y no sea el mismo que el que se busca)
+            raf.seek(0);
+            while ((linea = raf.readLine()) != null) {
+                String[] partes = linea.split("!");
+                if (partes.length != 2) continue;
+
+                Long idActual = Long.parseLong(partes[1]);
+
+                // Si el nuevo ID ya existe en otra entrada (diferente al que se quiere actualizar)
+                if (nuevoId != null && idActual.equals(nuevoId) && !idActual.equals(idBuscar)) {
+                    throw new RuntimeException("El nuevo ID ya existe en la base de datos.");
+                }
+            }
+
+            // 2. Reiniciar puntero para reconstruir el archivo
+            raf.seek(0);
+
             while ((linea = raf.readLine()) != null) {
                 String[] partes = linea.split("!");
                 if (partes.length != 2) continue;
@@ -118,13 +136,21 @@ public class AmigoService implements AmigoDAO {
                 Long idActual = Long.parseLong(partes[1]);
 
                 if (idActual.equals(idBuscar)) {
-                    // Actualizar los valores según lo ingresado
+                    // Actualizar valores
                     String nombreFinal = (nuevoNombre == null || nuevoNombre.trim().isEmpty()) ? nombreActual : nuevoNombre;
                     Long idFinal = (nuevoId == null) ? idActual : nuevoId;
-                    nuevoContenido.append(nombreFinal).append("!").append(idFinal).append(System.lineSeparator());
+
+                    nuevoContenido.append(nombreFinal)
+                            .append("!")
+                            .append(idFinal)
+                            .append(System.lineSeparator());
+
                     encontrado = true;
                 } else {
-                    nuevoContenido.append(nombreActual).append("!").append(idActual).append(System.lineSeparator());
+                    nuevoContenido.append(nombreActual)
+                            .append("!")
+                            .append(idActual)
+                            .append(System.lineSeparator());
                 }
             }
 
@@ -132,7 +158,7 @@ public class AmigoService implements AmigoDAO {
                 throw new RuntimeException("No se encontró el ID a actualizar.");
             }
 
-            // Reescribir el archivo con el nuevo contenido
+            // Reescribir el archivo
             raf.setLength(0);
             raf.writeBytes(nuevoContenido.toString());
 
@@ -141,6 +167,7 @@ public class AmigoService implements AmigoDAO {
             throw new RuntimeException("Error al acceder al archivo.");
         }
     }
+
 
     @Override
     public String delete(Long id, File bd) {
